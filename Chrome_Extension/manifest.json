@@ -1,0 +1,27 @@
+{
+	"manifest_version": 3,
+	"name": "OFTracker",
+	"description": "Scrape OnlyFans and tracking some activity",
+	"version": "0.01",
+	"content_scripts": [
+		{
+			"matches": ["https://www.amazon.com/*"],
+			"js": ["js/lib/jquery-3.5.1.min.js", "js/app/content.js", "js/lib/jwt-decode.min.js", "js/lib/utils.js"]
+		}
+	],
+	"web_accessible_resources": [{
+ 		"resources": ["lib/jquery.min.3.5.1.js", "js/lib/jwt-decode.min.js", "js/lib/utils.js"],
+ 		"matches": [],
+ 		"extension_ids": []
+	}],
+	"background": {
+		"service_worker": "js/app/background.js",
+		"type": "module"
+	},
+	"action": {
+		"default_popup": "views/popup.html"
+	},
+	"permissions": [
+  		"storage"
+	]
+}

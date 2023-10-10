@@ -1,0 +1,12 @@
+<p  ng-init="init()">Please Login</p>
+
+<div class="form-group">
+	<input type="text" class="form-control" name="name" ng-model="formData.email">
+	<br/>
+	<input type="password" class="form-control" name="password" ng-model="formData.password">
+	<span ng-if="errorText" class="text-danger">{{ errorText }}</span>
+</div>
+
+<a ng-click="login(formData)" class="btn btn-block btn-info">Login</a>
+<br />
+<a ui-sref="signup">Signup</a>
