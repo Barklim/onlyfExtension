@@ -105,3 +105,32 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
     return true;
 });
+
+chrome.runtime.onInstalled.addListener(() => {
+    // This event listener is triggered when the extension is installed or updated.
+    console.log('Extension installed or updated.');
+  });
+
+// chrome.webRequest.onBeforeRequest.addListener(
+//     function(details) {
+//     },
+//     {urls: ["<all_urls>"]},
+//     ["requestBody"]
+// );
+
+chrome.webRequest.onResponseStarted.addListener(
+    function(details) {
+        console.log('!!! 123');
+        console.log(details);
+        console.log('!!!');
+
+    //   return {requestHeaders: details.requestHeaders};
+    },
+    {urls: ["<all_urls>"]},
+//     // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
+//     // for onHeadersReceived blocking, extraHeaders, responseHeaders.
+//     // onResponseStarted = onCompleted
+    ["responseHeaders"]
+  );
+
+  
