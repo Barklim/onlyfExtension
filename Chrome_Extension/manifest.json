@@ -34,9 +34,14 @@
 	"action": {
 		"default_popup": "views/popup.html"
 	},
+	"host_permissions": [
+		"*://*.google.com/",
+		"http://localhost:3000/"
+	  ],
 	"permissions": [
   		"storage",
-		"webRequest"
+		"webRequest",
+		"cookies"
 	],
 	"icons": {
 		"16": "./assets/logo.png",

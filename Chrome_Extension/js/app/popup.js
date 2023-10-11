@@ -49,8 +49,34 @@ const errorBacks = ($scope, response) => {
 // ----- services -----
 
 OFTracker.service("DataService", function($http) {
-    this.fetchData = function() {
-        return $http.get('http://localhost:3000/coffees');
+    this.fetchMe = function(token) {
+		var config = {
+			headers: {
+				'Authorization': 'Bearer ' + token
+			}
+		};
+		
+		return new Promise(function(resolve, reject) {
+			$http.get('http://localhost:3000/users/me', config)
+				.then(function(response) {
+					resolve(response.data);
+				})
+				.catch(function(error) {
+					reject(error);
+				});
+        });
+    }
+
+	this.fetchRefreshTokens = function() {
+		return new Promise(function(resolve, reject) {
+			$http.post('http://localhost:3000/authentication/refresh-tokens')
+				.then(function(response) {
+					resolve(response.data);
+				})
+				.catch(function(error) {
+					reject(error);
+				});
+        });
     }
 });
 
@@ -58,6 +84,32 @@ OFTracker.service("DataService", function($http) {
 
 OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($scope, $state, DataService){
 	console.log('PopupCtrl Initialized');
+
+	utils.getStorageItem('user', function (token) {
+		if (token) {
+			DataService.fetchMe(token).then(function(response) {
+				console.log('Response from the API:', response.data);
+				$state.go('welcome');
+			}).catch(function(error) {
+				console.error('Error while fetching data:', error);
+
+				// TODO: by promises, promisify get tokens
+				// DataService.fetchRefreshTokens().then(function(response) {
+				// 	console.log('Response from the API:', response.data);
+				// 	utils.setStorageItem('user', response.accessToken,  function (token) {
+				// 		console.log('Response from the API:', response.data);
+				// 		DataService.fetchMe(response.accessToken).then(function(response) {
+				// 			// $state.go('welcome');
+				// 		}).catch(function(error) {
+				// 			console.error('Error while fetching data:', error);
+				// 		});
+				// 	})
+				// }).catch(function(error) {
+				// 	console.error('Error while fetching data:', error);
+				// });
+			});
+		}
+	});
 
 	$scope.init = function() {
 		utils.getStorageItem('user', function (userData) {
@@ -95,10 +147,7 @@ OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($
 			function(response) {
 				errorBacks($scope, response)
 
-				if(response.accessToken) {
-					// var decoded = jwt_decode(response.accessToken);
-					// $scope.name = response.user.username; 
-					// $scope.name = decoded.email;		
+				if(response.accessToken) {	
 					$state.go('welcome');
 				} else {
 					if (response.statusCode === 201) {
@@ -149,9 +198,29 @@ OFTracker.controller("ScraperCtrl", ['$scope', '$state', function($scope, $state
 						$scope.name = response.email;
 					} else {
 						$scope.errorText = String(response.message);
-						$scope.name = '123';
+						$scope.name = 'no email';
 					}	
 				})
 		});
 	}
+
+	chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+		if (message.type === 'updateState') {
+			$scope.$apply(function () {
+				$scope.name = message.data.name;
+			});
+		}
+		if (message.type === 'redirect') {
+			chrome.storage.sync.remove(['user'], function (result) {
+				console.log('Result of removal: ', result);
+			});
+			$state.go('login');
+		}
+	});
+
+	// chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+	// 	if (message.type === 'users/me') {
+	// 		$state.go('welcome');
+	// 	}
+	// });
 }]);

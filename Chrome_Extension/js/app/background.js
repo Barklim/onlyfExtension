@@ -10,15 +10,41 @@ let lastRequest = {
     lastRequestResponseType: 'json'
 }
 
-const firstBackgroundCall = function () {
-    // ajaxCall('GET', "user/me", {}, getStorageItem('user') ? getStorageItem('user').token : '', function (response) {
-    //     console.log('response from server is: ', response)
-    // });
+function ajaxCallRefreshTokens(type, path = 'authentication/refresh-tokens', {}, responseType, callback) {
+    let token = '';
     getStorageItem('user', function (userData) {
-        // console.log('!!! token User Data:', userData);
+        if (userData) {
+            token = userData;
+        }
+
+        fetch(domain + path, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: null
+        })
+            .then(response => {
+                if (responseType === 'json') {
+                    return response.json();
+                } else if (responseType === '') {
+                    return response;
+                } else {
+                    response.text();
+                }
+            })
+            .then(response => {
+                callback(response);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                callback({ error: 'Request failed' });
+            });
     });
 }
-const timeout = setTimeout(firstBackgroundCall, 1000);
+
+let isHandlingError = false;
 
 function ajaxCall(type, path, data, responseType, callback) {
     let token = '';
@@ -45,6 +71,33 @@ function ajaxCall(type, path, data, responseType, callback) {
             .then(response => {
                 console.log('Response status code:', response.status);
                 console.log('Response:', response);
+
+                if (response.status === 401) {
+                    if (!isHandlingError) {
+                        isHandlingError = true;
+                            ajaxCallRefreshTokens("POST", "authentication/refresh-tokens", {}, 'json', function (response) {
+                                if (!response.accessToken) {
+                                    chrome.runtime.sendMessage({ type: 'redirect', data: {} });
+                                }
+                                setStorageItem('user', response.accessToken);
+                                ajaxCall(
+                                    lastRequest.lastRequestType, 
+                                    lastRequest.lastRequestPath, 
+                                    lastRequest.lastRequestData, 
+                                    lastRequest.lastRequestResponseType,
+                                    function (response) {
+                                        isHandlingError = false;
+                                        chrome.runtime.sendMessage({ 
+                                            type: 'updateState', 
+                                            data: { name: `${ response ? response.email : null} restored` } 
+                                        });
+                                    
+                                    }
+                                )
+                            });
+                        }
+                }
+
                 if (responseType === 'json') {
                     return response.json();
                 } else if (responseType === '') {
@@ -55,26 +108,9 @@ function ajaxCall(type, path, data, responseType, callback) {
             })
             .then(response => {
                 console.log('Response body from server:', response);
-
-                // console.log('!!! SUCCESS');
-                // console.log(response);
-                // console.log(lastRequestURL);
-                // console.log(lastRequest);
-                // console.log('!!!');
-
                 callback(response);
             })
             .catch(error => {
-                // TODO: 401?
-                // console.log('!!! ERRROR');
-                // console.log(lastRequestURL);
-                // console.log(lastRequest);
-                // console.log(error);
-                // console.log(type);
-                // console.log(path);
-                // console.log(data);
-                // console.log('!!!');
-
                 console.error('Error:', error);
                 callback({ error: 'Request failed' });
             });
@@ -87,7 +123,7 @@ function setStorageItem(varName, data) {
         storageData[varName] = data;
 
         chrome.storage.sync.set(storageData, function () {
-            console.log('Item saved:', varName);
+            // console.log('Item saved:', varName);
         });
     }
 }
@@ -153,20 +189,20 @@ chrome.runtime.onInstalled.addListener(() => {
 //     ["requestBody"]
 // );
 
-chrome.webRequest.onResponseStarted.addListener(
-    function(details) {
-        // console.log('!!! onResponseStarted');
-        // console.log(details.statusCode);
-        // console.log(details);
-        // console.log(lastRequest);
-        // console.log('Last request URL:', lastRequestURL);
-        // console.log('!!!');
-    },
-    {urls: ["<all_urls>"]},
-    // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
-    // for onHeadersReceived blocking, extraHeaders, responseHeaders.
-    // onResponseStarted = onCompleted
-    ["responseHeaders"]
-  );
+// chrome.webRequest.onResponseStarted.addListener(
+//     function(details) {
+//         console.log('!!! onResponseStarted');
+//         console.log(details.statusCode);
+//         console.log(details);
+//         console.log(lastRequest);
+//         console.log('Last request URL:', lastRequestURL);
+//         console.log('!!!');
+//     },
+//     {urls: ["<all_urls>"]},
+//     // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
+//     // for onHeadersReceived blocking, extraHeaders, responseHeaders.
+//     // onResponseStarted = onCompleted
+//     ["responseHeaders"]
+//   );
 
   
