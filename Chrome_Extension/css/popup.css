@@ -2,3 +2,17 @@ html{
 	width: 400px;
 	height: 300px;
 }
+
+.logo-container {
+	display: flex;
+	align-items: center;
+    justify-content: center;
+	gap: 10px;
+}
+
+.logo {
+	width: 30px;
+	height: 30px;
+	position: relative;
+	bottom: 4px;
+}

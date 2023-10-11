@@ -1,4 +1,5 @@
 console.log('popup.js loaded');
+console.log('angular version:');
 console.log(angular.version);
 // docs https://code.angularjs.org/1.2.27/docs/guide/scope
 
@@ -28,6 +29,23 @@ OFTracker.config(function($stateProvider, $urlRouterProvider){
 	$urlRouterProvider.otherwise('login')
 })
 
+const errorBacks = ($scope, response) => {
+	if (response.statusCode === 400) {
+		$scope.$apply(function() {
+			if (response.message) {
+				$scope.errorText = String(response.message);
+			} else {
+				$scope.errorText = 'Bad request';
+			}
+		});
+	}
+	if (response.statusCode === 409) {
+		$scope.$apply(function() {
+			$scope.errorText = 'Conflict. User with this email alredy exist';
+		});
+	}
+}
+
 // ----- services -----
 
 OFTracker.service("DataService", function($http) {
@@ -40,9 +58,6 @@ OFTracker.service("DataService", function($http) {
 
 OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($scope, $state, DataService){
 	console.log('PopupCtrl Initialized');
-	// console.log($scope);
-	// console.log($state);
-	// console.log('');
 
 	$scope.init = function() {
 		utils.getStorageItem('user', function (userData) {
@@ -56,42 +71,47 @@ OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($
 	}
 
 	$scope.login = function(formData) {
-		console.log('formData from Login: ', formData);
+		// console.log('1. formData from Login: ', formData);
 		chrome.runtime.sendMessage({type: "login", data: formData},
 			function(response){
-				console.log('response from the background is: ', response);
+				// console.log('response from the background is: ', response);
 				if(response.accessToken) {
 					// var decoded = jwt_decode(response.accessToken);
 					// $scope.name = response.user.username; 
 					// $scope.name = decoded.email;		
 					$state.go('welcome');
 				} else {
-					$scope.errorText = String(response.message);
-				}	
+					$scope.$apply(function() {
+						$scope.errorText = String(response.message);
+					});
+				}
 			} 
 		)
 	}
 
 	$scope.signup = function(formData) {
-		console.log('formData from Signup: ', formData);
+		// console.log('formData from Signup: ', formData);
 		chrome.runtime.sendMessage({type: "signup", data: formData},
 			function(response) {
-				console.log('response from the background is: ', response);
-				if (response.statusCode === 400) {
-					$scope.errorText = String(response.message);
-				}
-				if (response.statusCode === 409) {
-					$scope.errorText = 'Conflict. User with this email alredy exist';
-				}
-				if (response.statusCode === 201) {
-					$state.go('login');
-					$scope.errorText = '';
-				}
+				errorBacks($scope, response)
 
-				if(response.token){
-					$state.go('login');
+				if(response.accessToken) {
+					// var decoded = jwt_decode(response.accessToken);
+					// $scope.name = response.user.username; 
+					// $scope.name = decoded.email;		
+					$state.go('welcome');
+				} else {
+					if (response.statusCode === 201) {
+						$scope.$apply(function() {
+							$scope.errorText = '';
+						});
+						$state.go('welcome');
+					}
+					// if(response.token){
+					// 	$state.go('login');
+					// }
 				}
-			} 
+			}
 		)
 	}
 

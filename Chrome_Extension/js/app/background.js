@@ -2,6 +2,14 @@ console.log('background script ran');
 let dev = true;
 let domain = dev ? "http://localhost:3000/" : 'https://myamazonhistory.com/';
 
+let lastRequestURL = '';
+let lastRequest = {
+    lastRequestType: 'GET',
+    lastRequestPath: '',
+    lastRequestData: {},
+    lastRequestResponseType: 'json'
+}
+
 const firstBackgroundCall = function () {
     // ajaxCall('GET', "user/me", {}, getStorageItem('user') ? getStorageItem('user').token : '', function (response) {
     //     console.log('response from server is: ', response)
@@ -19,7 +27,14 @@ function ajaxCall(type, path, data, responseType, callback) {
             token = userData;
         }
 
-        fetch(domain + path, {
+        // Store the URL before sending the request
+        lastRequestURL = domain + path;
+        lastRequest.lastRequestType = type;
+        lastRequest.lastRequestPath = path;
+        lastRequest.lastRequestData = data;
+        lastRequest.lastRequestResponseType = responseType;
+
+        fetch(lastRequestURL, {
             method: type,
             headers: {
                 'Content-Type': 'application/json',
@@ -29,18 +44,37 @@ function ajaxCall(type, path, data, responseType, callback) {
         })
             .then(response => {
                 console.log('Response status code:', response.status);
-                console.log('Response status code:', response);
+                console.log('Response:', response);
                 if (responseType === 'json') {
                     return response.json();
+                } else if (responseType === '') {
+                    return response;
                 } else {
-                    return response.text();
+                    response.text();
                 }
             })
             .then(response => {
-                console.log('Response from server:', response);
+                console.log('Response body from server:', response);
+
+                // console.log('!!! SUCCESS');
+                // console.log(response);
+                // console.log(lastRequestURL);
+                // console.log(lastRequest);
+                // console.log('!!!');
+
                 callback(response);
             })
             .catch(error => {
+                // TODO: 401?
+                // console.log('!!! ERRROR');
+                // console.log(lastRequestURL);
+                // console.log(lastRequest);
+                // console.log(error);
+                // console.log(type);
+                // console.log(path);
+                // console.log(data);
+                // console.log('!!!');
+
                 console.error('Error:', error);
                 callback({ error: 'Request failed' });
             });
@@ -72,11 +106,11 @@ function getStorageItem(varName, callback) {
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     switch (message.type) {
         case "login":
-            console.log('login logic ran with formData =', message.data);
+            // console.log('2. login logic ran with formData =', message.data);
             let userLoginCreds = message.data;
-            userLoginCreds.username = message.data.email.split('@')[0];
+            // userLoginCreds.username = message.data.email.split('@')[0];
             ajaxCall("POST", "authentication/sign-in", userLoginCreds, 'json', function (response) {
-                console.log('response from server is: ', response.accessToken);
+                // console.log('3. response from server is: ', response.accessToken);
                 setStorageItem('user', response.accessToken);
                 sendResponse(response);
             });
@@ -84,18 +118,17 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         case "signup":
             console.log('signup logic with formData =', message.data);
             let userCreds = message.data;
-            userCreds.username = message.data.email.split('@')[0];
+            // userCreds.username = message.data.email.split('@')[0];
             ajaxCall("POST", "authentication/sign-up", userCreds, 'json', function (response) {
-                console.log('response from server is: ', response);
+                // console.log('response from server is: ', response);
+                setStorageItem('user', response.accessToken);
                 sendResponse(response);
             });
             break;
         case "initWelcomePage":
-            console.log('login logic ran with formData =', message.data);
+            // console.log('initWelcomePage logic ran with data =', message.data);
             let id = message.data.id;
             ajaxCall("GET", `users/${id}`, {}, 'json', function (response) {
-                // ajaxCall("GET", `coffees/1`, {}, function (response) {
-                // coffees/1
                 console.log('response from server is: ', response);
                 sendResponse(response);
             });
@@ -111,6 +144,8 @@ chrome.runtime.onInstalled.addListener(() => {
     console.log('Extension installed or updated.');
   });
 
+// js fetch interceptor
+// https://blog.logrocket.com/intercepting-javascript-fetch-api-requests-responses/
 // chrome.webRequest.onBeforeRequest.addListener(
 //     function(details) {
 //     },
@@ -120,16 +155,17 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.webRequest.onResponseStarted.addListener(
     function(details) {
-        console.log('!!! 123');
-        console.log(details);
-        console.log('!!!');
-
-    //   return {requestHeaders: details.requestHeaders};
+        // console.log('!!! onResponseStarted');
+        // console.log(details.statusCode);
+        // console.log(details);
+        // console.log(lastRequest);
+        // console.log('Last request URL:', lastRequestURL);
+        // console.log('!!!');
     },
     {urls: ["<all_urls>"]},
-//     // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
-//     // for onHeadersReceived blocking, extraHeaders, responseHeaders.
-//     // onResponseStarted = onCompleted
+    // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
+    // for onHeadersReceived blocking, extraHeaders, responseHeaders.
+    // onResponseStarted = onCompleted
     ["responseHeaders"]
   );
 
