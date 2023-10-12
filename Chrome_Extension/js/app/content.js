@@ -12,6 +12,8 @@ const disable = (taId, btnClsname) => {
     const textAreaEl = document.getElementById(taId)
     const buttonEl = document.getElementsByClassName(btnClsname)
 
+    setStorageItem('isInterruption', true);
+
     textAreaEl.style.height = '70px'
     textAreaEl.setAttribute('maxlength', 1)
     textAreaEl.style.opacity = '0.9'
@@ -27,6 +29,7 @@ const disable = (taId, btnClsname) => {
         countdown--;
         if (countdown < 0) {
             clearInterval(countdownInterval);
+            setStorageItem('isInterruption', false);
             enable(taId, btnClsname);
         }
     }, 1000);
@@ -73,4 +76,31 @@ const inputHandler = (taId, btnClsname) => {
     });
 }
 
+// ----- init -----
+
+setTimeout(() => getStorageItem('isInterruption', function (interrupted) {
+    if (interrupted) {
+        disable(textAreaId, buttonClassname);
+    }
+}), 4000)
 setTimeout(() => inputHandler(textAreaId, buttonClassname), 4000)
+
+function setStorageItem(varName, data) {
+    const storageData = {};
+    storageData[varName] = data;
+
+    chrome.storage.sync.set(storageData, function () {
+        // console.log('Item saved:', varName);
+    });
+}
+
+function getStorageItem(varName, callback) {
+    chrome.storage.sync.get([varName], function (result) {
+        if (result[varName]) {
+            const parsedData = result[varName];
+            callback(parsedData);
+        } else {
+            callback(null);
+        }
+    });
+}

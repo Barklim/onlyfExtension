@@ -12,6 +12,7 @@
 			"matches": [
 				"https://www.onlyfans.com/*",
 				"https://onlyfans.com/*",
+				"https://onlyfans.com/my/chats/chat/*",
 				"https://main--sprightly-toffee-821aa4.netlify.app/*"
 			],
 			"js": [
