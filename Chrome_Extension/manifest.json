@@ -9,7 +9,11 @@
 	"author": "kliment.barkalov@gmail.com", 
 	"content_scripts": [
 		{
-			"matches": ["https://www.onlyfans.com/*"],
+			"matches": [
+				"https://www.onlyfans.com/*",
+				"https://onlyfans.com/*",
+				"https://main--sprightly-toffee-821aa4.netlify.app/*"
+			],
 			"js": [
 				"js/lib/jquery-3.5.1.min.js", 
 				"js/app/content.js", 
