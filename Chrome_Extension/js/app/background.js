@@ -1,7 +1,9 @@
 console.log('background script ran');
 let dev = true;
 let domain = dev ? "http://localhost:3000/" : 'https://myamazonhistory.com/';
+let domainOF = "https://onlyfans.com/api2/v2/";
 
+const chatUrlString = 'https://onlyfans.com/api2/v2/chats/';
 let lastRequestURL = '';
 let lastRequest = {
     lastRequestType: 'GET',
@@ -9,6 +11,49 @@ let lastRequest = {
     lastRequestData: {},
     lastRequestResponseType: 'json'
 }
+let requestHeaders = {};
+let cookieString = '';
+let tabIdScrapper = 0;
+
+// ----- init -----
+
+chrome.runtime.onInstalled.addListener(({reason}) => {
+    console.log('Extension installed or updated.');
+
+    if (reason === 'install' || reason === 'update') {
+        chrome.tabs.create({
+            // url: "../../views/popup.html"
+            // https://onlyfans.com/spicyjasmine.vip
+                url: "https://onlyfans.com/my/chats/",
+                active: false,
+                index: 0,
+                pinned: true,
+        }, (info) => {
+            tabIdScrapper = info.id;
+        });
+      }
+});
+
+chrome.tabs.onCreated.addListener(
+    (tab) => {
+        console.log(tab.id);
+        if ( tab.id === tabIdScrapper) {
+            setTimeout(() => sendContentMessage(tabIdScrapper), 1000*1)
+        }
+    }
+)
+
+chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
+    // console.log('!!! onRemoved');
+    // console.log(tabId);
+    if (tabIdScrapper === tabId) {
+        // console.log('!!! GOTCHA');
+        // logout()
+        // changeExtensionIcon();
+    }
+});
+
+// ----- ajax requests -----
 
 function ajaxCallRefreshTokens(type, path = 'authentication/refresh-tokens', {}, responseType, callback) {
     let token = '';
@@ -117,27 +162,58 @@ function ajaxCall(type, path, data, responseType, callback) {
     });
 }
 
-function setStorageItem(varName, data) {
-    if (varName !== 'searchPageData') {
-        const storageData = {};
-        storageData[varName] = data;
+function ajaxCallToOF(type, path, data, responseType, callback) {
+    fetch(domainOF + path, {
+        method: type,
+        headers: requestHeaders,
+        body: type === 'POST' ? JSON.stringify(data) : null
+    })
+        .then(response => {
+            console.log('Response status code:', response.status);
+            console.log('Response:', response);
 
-        chrome.storage.sync.set(storageData, function () {
-            // console.log('Item saved:', varName);
+            if (responseType === 'json') {
+                return response.json();
+            } else if (responseType === '') {
+                return response;
+            } else {
+                response.text();
+            }
+        })
+        .then(response => {
+            console.log('Response body from server:', response);
+            callback(response);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            callback({ error: 'Request failed' });
         });
-    }
 }
 
-function getStorageItem(varName, callback) {
-    chrome.storage.sync.get([varName], function (result) {
-        if (result[varName]) {
-            const parsedData = result[varName];
-            callback(parsedData);
-        } else {
-            callback(null);
-        }
-    });
-}
+// Get request to ajaxCallToOF
+// setTimeout(() => 
+//     ajaxCallToOF("GET", "chats/112299545/messages?limit=10&order=desc&skip_users=all", {}, 'json', function (response) {
+//         console.log('XXXX response from server is: ', response);
+//     })
+// , 1000*20)
+
+// Scrapping logic
+// setTimeout(() => 
+//     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+//     // chrome.tabs.update(tabs[0].id, { url: 'https://onlyfans.com/api2/v2/chats/168522236/messages?limit=10&order=desc&skip_users=all' });
+//     // https://onlyfans.com/my/chats/chat/112299545/
+//     chrome.tabs.update(tabs[0].id, { url: 'https://onlyfans.com/my/chats/chat/112299545/' });
+//   })
+// , 1000*20)
+// setTimeout(() => 
+//     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+//     // chrome.tabs.update(tabs[0].id, { url: 'https://onlyfans.com/api2/v2/chats/168522236/messages?limit=10&order=desc&skip_users=all' });
+//     // https://onlyfans.com/my/chats/chat/112299545/
+//     chrome.tabs.update(tabs[0].id, { url: 'https://onlyfans.com/my/chats/chat/171917545/' });
+//   })
+// , 1000*30)
+
+// ----- message listeners -----
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     switch (message.type) {
@@ -175,10 +251,120 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     return true;
 });
 
-chrome.runtime.onInstalled.addListener(() => {
-    // This event listener is triggered when the extension is installed or updated.
-    console.log('Extension installed or updated.');
-  });
+// ----- utils -----
+
+function logout() {
+    chrome.storage.sync.get(['user'], function (result) {
+        console.log('Value before removal: ', result.user);
+        chrome.storage.sync.remove(['user'], function (result) {
+            console.log('Result of removal: ', result);
+        });
+    });
+
+    utils.removeStorageItem('user')
+        .then((result) => {
+            console.log('Successfully removed "user" storage item', result);
+            $state.go('login');
+        })
+        .catch((error) => {
+            console.error('Error removing "user" storage item', error);
+        });
+}
+
+// TODO: use utils
+function setStorageItem(varName, data) {
+    if (varName !== 'searchPageData') {
+        const storageData = {};
+        storageData[varName] = data;
+
+        chrome.storage.sync.set(storageData, function () {
+            // console.log('Item saved:', varName);
+        });
+    }
+}
+
+// TODO: use utils
+function getStorageItem(varName, callback) {
+    chrome.storage.sync.get([varName], function (result) {
+        if (result[varName]) {
+            const parsedData = result[varName];
+            callback(parsedData);
+        } else {
+            callback(null);
+        }
+    });
+}
+
+function sendContentMessage(tabIdScrapper) {
+    const resp = chrome.tabs.sendMessage(tabIdScrapper, { type: 'showBanner' })
+}
+
+function convertHeadersArrayToObject(headersArray) {
+    const headersObject = {};
+  
+    const fieldMappings = {
+      'User-Agent': 'User-Agent',
+      'accept': 'Accept',
+      'app-token': 'App-Token',
+      'sec-ch-ua': 'Sec-Ch-Ua',
+      'sec-ch-ua-mobile': 'Sec-Ch-Ua-Mobile',
+      'sec-ch-ua-platform': 'Sec-Ch-Ua-Platform',
+      'sign': 'Sign',
+      'time': 'Time',
+      'user-id': 'User-Id',
+      'x-bc': 'X-Bc',
+      
+      'User-Id': 'User-Id',
+      'Accept': 'Accept',
+      'Time': 'Time',
+      'X-Bc': 'X-Bc',
+      'User-Agent': 'User-Agent',
+      'App-Token': 'App-Token',
+      'Sign': 'Sign,'
+    };
+  
+    headersArray.forEach(header => {
+      const name = header.name;
+      let value = header.value;
+  
+      // Проверяем, содержит ли значение кавычки и слеши, и не добавляем лишние
+      if (value.startsWith('"') && value.endsWith('"')) {
+        // Убираем начальную и конечную кавычки
+        value = value.slice(1, -1);
+      }
+  
+      // Проверяем, есть ли соответствующее поле в fieldMappings, и если есть, добавляем в объект
+      if (fieldMappings[name]) {
+        headersObject[fieldMappings[name]] = value;
+      }
+    });
+  
+    return headersObject;
+}
+
+function convertCookiesToString(cookies) {
+    const cookieStrings = [];
+  
+    cookies.forEach(cookie => {
+      if (cookie.domain === ".onlyfans.com") {
+        cookieStrings.push(`${cookie.name}=${cookie.value}`);
+      }
+    });
+  
+    return cookieStrings.join('; ');
+}
+
+function changeExtensionIcon() {
+    chrome.action.setIcon({ path: {
+        // "128": "../../assets/logoSuccess128.png" 
+        // "128": "../../assets/logoError128.png" 
+        // "16": "../../assets/logoWarning16.png", 
+        // "48": "../../assets/logoWarning48.png", 
+        "128": "../../assets/logoWarning128.png" 
+    }})
+}
+
+// ----- listeners -----
 
 // js fetch interceptor
 // https://blog.logrocket.com/intercepting-javascript-fetch-api-requests-responses/
@@ -189,20 +375,39 @@ chrome.runtime.onInstalled.addListener(() => {
 //     ["requestBody"]
 // );
 
-// chrome.webRequest.onResponseStarted.addListener(
+// chrome.webRequest.onSendHeaders.addListener(
 //     function(details) {
-//         console.log('!!! onResponseStarted');
-//         console.log(details.statusCode);
-//         console.log(details);
-//         console.log(lastRequest);
-//         console.log('Last request URL:', lastRequestURL);
+//         console.log('!!! SSS onSendHeaders');
+//         if (details.url.includes(chatUrlString)) {
+
+//             console.log('!!! INSIDE');
+//             console.log(details.url);
+//             console.log(details); 
+
+//             requestHeaders = convertHeadersArrayToObject(details.requestHeaders)
+
+//             const cookie = chrome.cookies;
+//             chrome.cookies.getAll(
+//                 {},
+//                 (cookies) => {
+//                     // console.log('XXXX get all cookie: ');
+//                     // console.log(cookies);
+//                     cookieString = convertCookiesToString(cookies);
+//                     requestHeaders['Cookie'] = cookieString;
+//                     // requestHeaders['Accept-Encoding'] = 'gzip, deflate, br';
+//                     // requestHeaders['Accept-Language'] = 'en-US,en;q=0.9';
+//                     // requestHeaders['Referer'] = 'https://onlyfans.com/my/chats/chat/112299545/';
+//                     // requestHeaders['Sec-Fetch-Dest'] = 'empty';
+//                     // requestHeaders['Sec-Fetch-Mode'] = 'cors';
+//                     // requestHeaders['Sec-Fetch-Site'] = 'same-origin';
+//                 }
+//             )
+//             console.log(requestHeaders);
+//         }
+     
 //         console.log('!!!');
 //     },
 //     {urls: ["<all_urls>"]},
-//     // for onBeforeRequest blocking - , extraHeaders ?, requestBody. 
-//     // for onHeadersReceived blocking, extraHeaders, responseHeaders.
-//     // onResponseStarted = onCompleted
-//     ["responseHeaders"]
-//   );
-
+//     ["requestHeaders"]
+// );
   

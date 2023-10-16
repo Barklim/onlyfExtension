@@ -1,8 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "OFTracker - OnlyFans Tracker",
-	"version": "0.01",
-	"version_name": "1.0 beta",
+	"version": "0.02",
+	"version_name": "1.1 beta",
 	"short_name": "OFTracker",
 	"description": "Scrape OnlyFans and tracking some activity",
 	"minimum_chrome_version": "107",
@@ -12,6 +12,7 @@
 			"matches": [
 				"https://www.onlyfans.com/*",
 				"https://onlyfans.com/*",
+				"https://onlyfans.com/my/*",
 				"https://onlyfans.com/my/chats/chat/*",
 				"https://main--sprightly-toffee-821aa4.netlify.app/*"
 			],
@@ -20,6 +21,10 @@
 				"js/app/content.js", 
 				"js/lib/jwt-decode.min.js", 
 				"js/lib/utils.js"
+			],
+			"css": [
+				"css/darkly-bootswatch.css",
+				"css/banner.css"
 			]
 		}
 	],
@@ -37,16 +42,25 @@
 		"type": "module"
 	},
 	"action": {
-		"default_popup": "views/popup.html"
+		"default_popup": "views/popup.html",
+		"default_icon": {
+			"16": "./assets/logo.png",
+			"48": "./assets/logo.png",
+			"128": "./assets/logo.png"
+		  }
 	},
 	"host_permissions": [
 		"*://*.google.com/",
-		"http://localhost:3000/"
+		"http://localhost:3000/",
+		"http://*/*",
+		"https://*/*"
 	  ],
 	"permissions": [
   		"storage",
 		"webRequest",
-		"cookies"
+		"cookies",
+		"activeTab",
+		"tabs"
 	],
 	"icons": {
 		"16": "./assets/logo.png",
