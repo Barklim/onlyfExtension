@@ -1,8 +1,7 @@
 console.log('popup.js loaded');
-console.log('angular version:');
-console.log(angular.version);
+// console.log('angular version:');
+// console.log(angular.version);
 // docs https://code.angularjs.org/1.2.27/docs/guide/scope
-
 
 let OFTracker = angular.module("oftracker", ['ui.router']);
 
@@ -91,7 +90,8 @@ OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($
 				console.log('Response from the API:', response.data);
 				$state.go('welcome');
 			}).catch(function(error) {
-				console.error('Error while fetching data:', error);
+				// Back
+				// console.error('Error while fetching data:', error);
 
 				// TODO: by promises, promisify get tokens
 				// DataService.fetchRefreshTokens().then(function(response) {
@@ -165,13 +165,6 @@ OFTracker.controller("PopupCtrl", ['$scope', '$state', 'DataService', function($
 	}
 
 	$scope.logout = function() {
-		chrome.storage.sync.get(['user'], function (result) {
-			console.log('Value before removal: ', result.user);
-			chrome.storage.sync.remove(['user'], function (result) {
-				console.log('Result of removal: ', result);
-			});
-		});
-
 		utils.removeStorageItem('user')
 			.then((result) => {
 				console.log('Successfully removed "user" storage item', result);
@@ -224,3 +217,10 @@ OFTracker.controller("ScraperCtrl", ['$scope', '$state', function($scope, $state
 	// 	}
 	// });
 }]);
+
+// ----- listeneners -----
+
+// chrome.storage.onChanged.addListener(
+// 	(message) => {}
+// )
+

@@ -14,6 +14,11 @@ let lastRequest = {
 let requestHeaders = {};
 let cookieString = '';
 let tabIdScrapper = 0;
+const logoIcon = {
+    'success': 'logoSuccess128.png',
+    'error': 'logoError128.png',
+    'warning': 'logoWarning128.png',
+}
 
 // ----- init -----
 
@@ -44,12 +49,9 @@ chrome.tabs.onCreated.addListener(
 )
 
 chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
-    // console.log('!!! onRemoved');
-    // console.log(tabId);
+    console.log(tabIdScrapper === tabId);
     if (tabIdScrapper === tabId) {
-        // console.log('!!! GOTCHA');
-        // logout()
-        // changeExtensionIcon();
+        logout(changeExtensionIcon(logoIcon.error))
     }
 });
 
@@ -225,6 +227,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
                 // console.log('3. response from server is: ', response.accessToken);
                 setStorageItem('user', response.accessToken);
                 sendResponse(response);
+                changeExtensionIcon(logoIcon.warning);
             });
             break;
         case "signup":
@@ -253,25 +256,18 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 // ----- utils -----
 
-function logout() {
-    chrome.storage.sync.get(['user'], function (result) {
-        console.log('Value before removal: ', result.user);
-        chrome.storage.sync.remove(['user'], function (result) {
-            console.log('Result of removal: ', result);
-        });
-    });
-
-    utils.removeStorageItem('user')
+function logout(cb) {
+    removeStorageItem('user')
         .then((result) => {
             console.log('Successfully removed "user" storage item', result);
-            $state.go('login');
+            cb();
         })
         .catch((error) => {
             console.error('Error removing "user" storage item', error);
         });
 }
 
-// TODO: use utils
+// TODO: use utils ?
 function setStorageItem(varName, data) {
     if (varName !== 'searchPageData') {
         const storageData = {};
@@ -283,7 +279,6 @@ function setStorageItem(varName, data) {
     }
 }
 
-// TODO: use utils
 function getStorageItem(varName, callback) {
     chrome.storage.sync.get([varName], function (result) {
         if (result[varName]) {
@@ -295,8 +290,20 @@ function getStorageItem(varName, callback) {
     });
 }
 
+function removeStorageItem(varName) {
+    return new Promise((resolve, reject) => {
+        chrome.storage.sync.remove(varName, function (result) {
+            if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
 function sendContentMessage(tabIdScrapper) {
-    const resp = chrome.tabs.sendMessage(tabIdScrapper, { type: 'showBanner' })
+    chrome.tabs.sendMessage(tabIdScrapper, { type: 'showBanner' })
 }
 
 function convertHeadersArrayToObject(headersArray) {
@@ -354,13 +361,11 @@ function convertCookiesToString(cookies) {
     return cookieStrings.join('; ');
 }
 
-function changeExtensionIcon() {
+function changeExtensionIcon(icon) {
     chrome.action.setIcon({ path: {
-        // "128": "../../assets/logoSuccess128.png" 
-        // "128": "../../assets/logoError128.png" 
         // "16": "../../assets/logoWarning16.png", 
         // "48": "../../assets/logoWarning48.png", 
-        "128": "../../assets/logoWarning128.png" 
+        "128": `../../assets/${icon}` 
     }})
 }
 
